@@ -1,0 +1,25 @@
+{
+  "name": "auto-lead-allocator",
+  "version": "1.0.0",
+  "description": "Automatically fetches and allocates new leads from Surya Loan CRM",
+  "main": "auto-allocate-leads.js",
+  "scripts": {
+    "start": "node auto-allocate-leads.js",
+    "dev": "nodemon auto-allocate-leads.js"
+  },
+  "keywords": [
+    "lead",
+    "allocator",
+    "automation",
+    "crm"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
