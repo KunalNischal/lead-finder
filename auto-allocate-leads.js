@@ -20,7 +20,7 @@ const CONFIG = {
     // Auto-allocate settings
     AUTO_ALLOCATE: true, // Set to false to only notify without allocating
     
-    // User details
+    // User details (REQUIRED - extract from browser or fill manually)
     USER_ID: '', // Will be extracted from session
     CUSTOMER_ID: '', // Will be extracted from session
     
@@ -121,6 +121,21 @@ async function fetchLeadList() {
     }
 }
 
+function extractUserDetails(html) {
+    const $ = cheerio.load(html);
+    
+    // Try to extract user_id and customer_id from the page
+    // These might be in hidden inputs, data attributes, or script tags
+    const userId = $('input[name="user_id"]').val() || 
+                   $('[data-user-id]').attr('data-user-id') ||
+                   '';
+    const customerId = $('input[name="customer_id"]').val() || 
+                       $('[data-customer-id]').attr('data-customer-id') ||
+                       '';
+    
+    return { userId, customerId };
+}
+
 function parseLeadsFromHtml(html) {
     const $ = cheerio.load(html);
     const leads = [];
@@ -191,11 +206,17 @@ async function allocateLeads(leads) {
             return true;
         } else {
             log(`Allocation failed: ${response.data?.err || 'Unknown error'}`, 'error');
+            log(`Response data: ${JSON.stringify(response.data)}`, 'error');
             return false;
         }
         
     } catch (error) {
         log(`Error allocating leads: ${error.message}`, 'error');
+        if (error.response) {
+            log(`Status: ${error.response.status}`, 'error');
+            log(`Response: ${JSON.stringify(error.response.data)}`, 'error');
+            log(`Headers sent: user_id='${CONFIG.USER_ID}', customer_id='${CONFIG.CUSTOMER_ID}'`, 'error');
+        }
         return false;
     }
 }
@@ -272,6 +293,19 @@ async function initializeExistingLeads() {
         const leads = parseLeadsFromHtml(html);
         leads.forEach(lead => existingLeadIds.add(lead.leadId));
         log(`Initialized with ${existingLeadIds.size} existing lead(s)`, 'success');
+        
+        // Try to extract user details if not set
+        if (!CONFIG.USER_ID || !CONFIG.CUSTOMER_ID) {
+            const details = extractUserDetails(html);
+            if (details.userId) {
+                CONFIG.USER_ID = details.userId;
+                log(`Extracted USER_ID: ${CONFIG.USER_ID}`, 'success');
+            }
+            if (details.customerId) {
+                CONFIG.CUSTOMER_ID = details.customerId;
+                log(`Extracted CUSTOMER_ID: ${CONFIG.CUSTOMER_ID}`, 'success');
+            }
+        }
     } else {
         log('Failed to initialize existing leads', 'error');
     }
@@ -298,6 +332,19 @@ async function main() {
     
     // Initialize existing leads
     await initializeExistingLeads();
+    
+    // Validate required configuration
+    if (!CONFIG.USER_ID || !CONFIG.CUSTOMER_ID) {
+        log('⚠️  WARNING: USER_ID or CUSTOMER_ID is missing!', 'error');
+        log('Allocation will fail with 403 error.', 'error');
+        log('Please set these values in CONFIG or extract them from your browser:', 'warning');
+        log('1. Open browser DevTools (F12)', 'info');
+        log('2. Go to the lead allocation page', 'info');
+        log('3. Inspect the allocation form for user_id and customer_id', 'info');
+        log(`Current USER_ID: '${CONFIG.USER_ID}'`, 'info');
+        log(`Current CUSTOMER_ID: '${CONFIG.CUSTOMER_ID}'`, 'info');
+        log('\nContinuing anyway...\n', 'warning');
+    }
     
     // Display configuration
     log(`Auto-allocate: ${CONFIG.AUTO_ALLOCATE ? 'ENABLED ✓' : 'DISABLED ✗'}`);
