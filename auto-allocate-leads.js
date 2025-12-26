@@ -196,7 +196,15 @@ async function allocateLeads(leads) {
         
         log(`Attempting to allocate ${checkList.length} lead(s)...`);
         
-        // Build form data properly for array parameters
+        // Build payload matching the exact format from the AJAX call
+        const payload = {
+            checkList: checkList,
+            user_id: CONFIG.USER_ID,
+            customer_id: CONFIG.CUSTOMER_ID,
+            csrf_token: CONFIG.CSRF_TOKEN
+        };
+        
+        // Convert to URL-encoded format (matching jQuery's $.ajax default behavior)
         const formData = new URLSearchParams();
         checkList.forEach(item => {
             formData.append('checkList[]', item);
@@ -205,7 +213,7 @@ async function allocateLeads(leads) {
         formData.append('customer_id', CONFIG.CUSTOMER_ID);
         formData.append('csrf_token', CONFIG.CSRF_TOKEN);
         
-        const response = await axiosInstance.post(CONFIG.ALLOCATE_URL, formData, {
+        const response = await axiosInstance.post(CONFIG.ALLOCATE_URL, formData.toString(), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Cookie': CONFIG.COOKIES
