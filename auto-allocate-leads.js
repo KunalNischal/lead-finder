@@ -6,6 +6,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 // ======================== CONFIGURATION ========================
 const CONFIG = {
@@ -26,7 +28,10 @@ const CONFIG = {
     
     // Lead list endpoint
     LEAD_LIST_URL: '/GetLeadTaskList/S4/REPEAT?sOrderBy=desc',
-    ALLOCATE_URL: '/allocateLeads'
+    ALLOCATE_URL: '/allocateLeads',
+    
+    // Log file for new leads
+    LEADS_LOG_FILE: 'new_leads_log.txt'
 };
 
 // ======================== STATE MANAGEMENT ========================
@@ -61,6 +66,18 @@ function log(message, type = 'info') {
     }[type] || '[INFO]';
     
     console.log(`${timestamp} ${prefix} ${message}`);
+}
+
+function logLeadToFile(lead, allocated = false) {
+    const timestamp = new Date().toLocaleString();
+    const status = allocated ? 'ALLOCATED' : 'FOUND';
+    const logEntry = `${timestamp} | ${status} | Lead ID: ${lead.leadId} | Checkbox Value: ${lead.checkboxValue}\n`;
+    
+    try {
+        fs.appendFileSync(CONFIG.LEADS_LOG_FILE, logEntry, 'utf8');
+    } catch (error) {
+        log(`Failed to write to log file: ${error.message}`, 'error');
+    }
 }
 
 function sleep(ms) {
@@ -254,9 +271,10 @@ async function checkForNewLeads() {
         if (newLeads.length > 0) {
             log(`🎯 Found ${newLeads.length} NEW lead(s)!`, 'success');
             
-            // Display new lead IDs
+            // Display new lead IDs and log to file
             newLeads.forEach(lead => {
                 log(`  → New Lead: ${lead.leadId}`, 'info');
+                logLeadToFile(lead, false);
             });
             
             // Auto-allocate if enabled
@@ -264,6 +282,8 @@ async function checkForNewLeads() {
                 const success = await allocateLeads(newLeads);
                 
                 if (success) {
+                    // Log successful allocation
+                    newLeads.forEach(lead => logLeadToFile(lead, true));
                     // Update existing lead IDs after successful allocation
                     currentLeads.forEach(lead => existingLeadIds.add(lead.leadId));
                 }
