@@ -25,8 +25,7 @@ const CONFIG = {
     CUSTOMER_ID: '', // Will be extracted from session
     
     // Lead list endpoint
-    // S4 = Unpaid-Repeat Applications, S3 = Repeat Applications (adjust as needed)
-    LEAD_LIST_URL: '/GetLeadTaskList/S3',
+    LEAD_LIST_URL: '/GetLeadTaskList/S4/REPEAT?sOrderBy=desc',
     ALLOCATE_URL: '/allocateLeads'
 };
 
